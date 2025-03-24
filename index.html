@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>统计图表生成器</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.2.31/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="app" class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-center text-indigo-700">统计图表生成器</h1>
+            <p class="text-center text-gray-600 mt-2">选择图表类型，输入数据，生成精美的统计图表</p>
+        </header>
+
+        <main class="bg-white rounded-lg shadow-lg p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- 左侧：图表类型选择 -->
+                <div class="md:col-span-1">
+                    <h2 class="text-xl font-semibold mb-4 text-indigo-600">图表类型</h2>
+                    <div class="space-y-3">
+                        <div v-for="(chart, index) in chartTypes" :key="index" 
+                            @click="selectChartType(chart.type)"
+                            class="p-3 border rounded-md cursor-pointer transition-all duration-200 hover:shadow-md"
+                            :class="selectedChartType === chart.type ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 flex items-center justify-center mr-3">
+                                    <i :class="chart.icon" class="text-indigo-600"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-medium">{{ chart.name }}</h3>
+                                    <p class="text-sm text-gray-500">{{ chart.description }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 中间：数据输入 -->
+                <div class="md:col-span-1">
+                    <h2 class="text-xl font-semibold mb-4 text-indigo-600">数据输入</h2>
+                    
+                    <!-- 数据输入表单 -->
+                    <div v-if="selectedChartType">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">数据标签 (用逗号分隔)</label>
+                            <input v-model="labels" type="text" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+                                placeholder="例如: 一月,二月,三月,四月">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">数据值 (用逗号分隔)</label>
+                            <textarea v-model="dataValues" rows="4" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                placeholder="例如: 10,25,45,30"></textarea>
+                        </div>
+
+                        <div v-if="selectedChartType === 'pie' || selectedChartType === 'doughnut'" class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">背景颜色 (可选，用逗号分隔)</label>
+                            <input v-model="backgroundColors" type="text" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+                                placeholder="例如: #FF6384,#36A2EB,#FFCE56">
+                        </div>
+
+                        <div v-if="selectedChartType === 'line' || selectedChartType === 'bar'" class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">数据集名称</label>
+                            <input v-model="datasetLabel" type="text" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+                                placeholder="例如: 销售额">
+                        </div>
+
+                        <div v-if="selectedChartType === 'line' || selectedChartType === 'bar'" class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">X轴标题</label>
+                            <input v-model="xAxisLabel" type="text" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+                                placeholder="例如: 月份">
+                        </div>
+
+                        <div v-if="selectedChartType === 'line' || selectedChartType === 'bar'" class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Y轴标题</label>
+                            <input v-model="yAxisLabel" type="text" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+                                placeholder="例如: 销售额 (万元)">
+                        </div>
+
+                        <button @click="generateChart" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200">
+                            生成图表
+                        </button>
+                    </div>
+                    <div v-else class="text-center text-gray-500 py-10">
+                        请先选择一个图表类型
+                    </div>
+                </div>
+
+                <!-- 右侧：图表显示 -->
+                <div class="md:col-span-1">
+                    <h2 class="text-xl font-semibold mb-4 text-indigo-600">图表预览</h2>
+                    <div class="bg-gray-50 border rounded-md p-4 h-64 flex items-center justify-center relative">
+                        <canvas id="chartCanvas" width="400" height="400"></canvas>
+                        <div v-if="!chartGenerated" class="text-center text-gray-500">
+                            生成的图表将显示在这里
+                        </div>
+                        <button v-if="chartGenerated" @click="toggleFullscreen" class="absolute top-2 right-2 bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-md">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+
+                    <!-- 统计数据 -->
+                    <div v-if="chartGenerated" class="mt-6">
+                        <h3 class="font-semibold text-lg mb-2 text-indigo-600">统计数据</h3>
+                        <div class="bg-gray-50 rounded-md p-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="text-sm">
+                                    <span class="font-medium">总和:</span> 
+                                    <span class="text-gray-700">{{ statistics.sum }}</span>
+                                </div>
+                                <div class="text-sm">
+                                    <span class="font-medium">平均值:</span> 
+                                    <span class="text-gray-700">{{ statistics.average }}</span>
+                                </div>
+                                <div class="text-sm">
+                                    <span class="font-medium">最大值:</span> 
+                                    <span class="text-gray-700">{{ statistics.max }}</span>
+                                </div>
+                                <div class="text-sm">
+                                    <span class="font-medium">最小值:</span> 
+                                    <span class="text-gray-700">{{ statistics.min }}</span>
+                                </div>
+                                <div class="text-sm">
+                                    <span class="font-medium">中位数:</span> 
+                                    <span class="text-gray-700">{{ statistics.median }}</span>
+                                </div>
+                                <div class="text-sm">
+                                    <span class="font-medium">标准差:</span> 
+                                    <span class="text-gray-700">{{ statistics.stdDev }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="mt-8 text-center text-gray-500 text-sm">
+            <p>&copy; 2025 统计图表生成器 | 使用 Vue.js, Chart.js 和 Tailwind CSS 构建</p>
+        </footer>
+        
+        <!-- 全屏图表模态框 -->
+        <div v-if="isFullscreen" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-lg p-6 w-11/12 h-5/6 flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-indigo-700">图表全屏查看</h3>
+                    <button @click="toggleFullscreen" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="flex-grow relative w-full h-full">
+                    <canvas id="fullscreenChartCanvas" class="w-full h-full max-w-full max-h-full"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
