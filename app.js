@@ -86,9 +86,9 @@ const app = createApp({
                 if (!dataValues.value) dataValues.value = '25,40,20,15';
                 if (!backgroundColors.value) backgroundColors.value = '#FF6384,#36A2EB,#4BC0C0,#FFCE56';
             } else if (type === 'radar') {
-                if (!labels.value) labels.value = '攻击,防御,速度,生命,魔法';
+                if (!labels.value) labels.value = '白菜,萝卜,土豆,茄子,西红柿';
                 if (!dataValues.value) dataValues.value = '65,59,90,81,56';
-                if (!datasetLabel.value) datasetLabel.value = '能力值';
+                if (!datasetLabel.value) datasetLabel.value = '蔬菜';
             } else if (type === 'polarArea') {
                 if (!labels.value) labels.value = '市场份额,用户满意度,增长率,投资回报';
                 if (!dataValues.value) dataValues.value = '70,85,65,90';
